@@ -15,7 +15,7 @@ rom[4] = 0x30
 
 # set instruction memory to essentially start from 0.
 # the first 15 bits (of 0x8000 i.e.) are used for addressing
-# whilst the MSB is used to cheap-enable the EEPROM reads,
+# whilst the MSB is used to chip-enable the EEPROM reads,
 # NOTE: 6502 uses little endian
 rom[0x7FFC] = 0x00
 rom[0x7FFD] = 0x80
