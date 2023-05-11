@@ -1,6 +1,6 @@
 # 6502 Computer
 
-Source files for my 6502 breadboard-computer from [Ben Eater](https://eater.net/6502).
+Source files for my 6502 CPU breadboard-computer from [Ben Eater](https://eater.net/6502).
 
 ## Write to EEPROM
 ```

@@ -1,7 +1,7 @@
 #define CLOCK 2
 #define READ_WRITE 3
 
-const uint8_t ADDR[] = {46, 48, 50, 22, 46, 44, 42, 40, 38, 36, 34, 32, 30, 28, 26, 24};
+const uint8_t ADDR[] = {46, 48, 50, 22, 46, 44, 42, 40, 38, 36, 34, 32, 30, 28, 26, 24}; // MSB..LSB
 const uint8_t DATA[] = {51, 49, 47, 45, 43, 41, 39, 37}; // MSB..LSB
 
 void setup() {
