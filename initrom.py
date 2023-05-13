@@ -1,17 +1,26 @@
 """
-fill the EEPROM with nop instructions
+Load EEPROM with a simple program.
+In this case, 8 LEDs blinking bitwise NOT: 0101 0101(0x55) -> 1010 1010(0xAA))
 """
 
-rom = bytearray([0xEA] * 32768)
+code = bytearray([
+  # set all pins of port B to output, so DDRB(reg2)='1111 1111'
+  0xA9, 0xFF,         # lda #$ff
+  0x8D, 0x02, 0x60,   # sta $6002 (01.....0010, write to register 2 of the W65C22)
+  
+  # (MAIN) write to reg0 (output port B) 0x55
+  0xA9, 0x55,         # lda #$55
+  0x8D, 0x00, 0x60,   # sta $6000
 
-# load A register with 0x37
-rom[0] = 0xA9
-rom[1] = 0x37
+  # write to reg0 (output port B) 0xAA
+  0xA9, 0xAA,         # lda #$AA
+  0x8D, 0x00, 0x60,   # sta $6000
 
-# store register A at rom[0x3000]
-rom[2] = 0x8D
-rom[3] = 0x00
-rom[4] = 0x30
+  # jump to (MAIN)
+  0x4C, 0x05, 0x80
+])
+
+rom = code + bytearray([0xEA] * (32768 - len(code)))
 
 # set instruction memory to essentially start from 0.
 # the first 15 bits (of 0x8000 i.e.) are used for addressing
