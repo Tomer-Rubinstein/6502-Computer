@@ -32,4 +32,3 @@ rom[0x7FFD] = 0x80
 
 with open("rom.bin", "wb") as out_file:
     out_file.write(rom)
-
