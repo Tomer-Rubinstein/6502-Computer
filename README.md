@@ -13,7 +13,7 @@ For personal preferences, I renamed the newly created executable to ``vasm`` and
 Using this software, we can write our binary files to the EEPROM using the **MiniPRO TL866 II Plus** chip programmer.
 Follow the installation process discussed [here](https://gitlab.com/DavidGriffith/minipro).
 
-**NOTE**‼️: On VirtualBox, remember to mount the USB connection to the VM at ``Settings > USB > USB Device Filters``.
+**NOTE**: On VirtualBox, remember to mount the USB connection to the VM at ``Settings > USB > USB Device Filters``.
 
 ## Compilation
 ```
