@@ -27,34 +27,37 @@ reset:
   lda #%00000001  ; clear screen
   jsr lcd_instruction
 
-  lda #"H"
-  jsr print_char
-  lda #"e"
-  jsr print_char
-  lda #"l"
-  jsr print_char
-  lda #"l"
-  jsr print_char
-  lda #"o"
-  jsr print_char
-  lda #" "
-  jsr print_char
-  lda #"W"
-  jsr print_char
-  lda #"o"
-  jsr print_char
-  lda #"r"
-  jsr print_char
-  lda #"l"
-  jsr print_char
-  lda #"d"
-  jsr print_char
-  
+  ldx #(<message)
+  ldy #(>message)
+  jsr print_str  
 
 ; "halt" the cpu
 loop:
   jmp loop
 
+
+message: .asciiz "Hello World!"
+
+
+; prints a string terminated by \0
+; params:
+;   - reg X, lower byte of the effective address
+;   - reg Y, higher byte of the effective address
+print_str:
+  stx $0000
+  sty $0001
+  ldy #0
+print_str_loop:
+  lda ($0000), Y
+  beq end_print
+  jsr print_char
+  iny
+  jmp print_str_loop
+end_print:
+  rts
+
+
+; busy waits until the busy flag of the LCD is set
 lcd_wait:
   pha
   ; set port B to input
@@ -80,6 +83,8 @@ lcdbusy:
   pla
   rts
 
+
+; send an instruction to the LCD
 lcd_instruction:
   jsr lcd_wait
 
@@ -92,6 +97,10 @@ lcd_instruction:
   sta PORTA
   rts
 
+
+; prints char to LCD
+; params:
+;   - reg A, character value
 print_char:
   jsr lcd_wait
 
