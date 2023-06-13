@@ -2,6 +2,11 @@ PORTB = $6000
 PORTA = $6001
 DDRB  = $6002
 DDRA  = $6003
+PCR   = $600C
+IFR   = $600D
+IER   = $600E
+
+counter = $0200 ; 1 bytes
 
 E   = %10000000
 RW  = %01000000
@@ -9,6 +14,18 @@ RS  = %00100000
 
   .org $8000
 reset:
+  ldx #$ff
+  txs 
+  cli
+
+  lda #$82
+  sta IER
+  lda #$00
+  sta PCR
+
+  lda #0
+  sta counter
+
   lda #%11111111  ; set all pins on port B to output
   sta DDRB
 
@@ -113,8 +130,23 @@ print_char:
   sta PORTA
   rts
 
-  .org $fffc
-  .word reset
-  .word $0000 ; pad zeroes to match EEPROM size
+nmi:
+ rti
 
+irq:
+  lda #%00000001  ; clear screen
+  jsr lcd_instruction
+
+  inc counter
+  lda counter
+  adc #"0"
+  jsr print_char 
+
+  bit PORTA
+  rti
+
+  .org $fffa
+  .word nmi
+  .word reset
+  .word irq
 
