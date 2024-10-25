@@ -13,65 +13,137 @@ E   = %10000000
 RW  = %01000000
 RS  = %00100000
 
-ticks = $0000 ; 4 bytes
-toggle_time = $0004 ; 1 bytes
+; the followings will be addressed according to little endian
+; i.e. $0001 - low byte of "ground", $0002 - high byte of "ground"
+player_col = $0000 ; 1 bytes
+ground    = $0001 ; 2 bytes
+ticks     = $0003 ; 4 bytes
+jump_tick_count = $0007 ; 1 bytes
 
   .org $8000
 reset:
+  sei
   ldx #$ff
   txs
-  cli
 
-  ; previous button interrupts
-  ; lda #$82
-  ; sta IER
-
-  lda #0
+  lda #$82
+  sta IER
+  lda #$00
   sta PCR
-  sta toggle_time
 
-  sei
-  jsr init_lcd
-  jsr init_timer
-  cli
+  ; the column of the player relative to ground+1 (left 8 bits of screen)
+  lda #$80
+  sta player_col
 
-  ldx #(<message)
-  ldy #(>message)
-  jsr print_str
-
-; "halt" the cpu
-loop:
-  sec
-  lda ticks
-  sbc toggle_time
-  cmp #25 ; have 250ms elapsed?
-  bcc loop
-  ; do whatever
-  lda ticks
-  sta toggle_time
-  jmp loop
-
-
-message: .asciiz "Hello World!"
-
-
-init_timer:
   lda #0
+  sta ground
+  sta ground+1
   sta ticks
   sta ticks+1
   sta ticks+2
   sta ticks+3
-  ; set continuous interrupts to enable timer Free-Run mode
-  lda #%01000000
-  sta ACR
-  ; trigger interrupts every 10ms 
-  lda #$0E
+  sta jump_tick_count
+
+  jsr init_lcd
+  cli
+
+game_loop:
+  jsr print_game
+
+  ; check for collision
+  lda ground+1
+  and player_col
+  cmp #$80
+  beq end_game
+  
+  ; add random obstacles every 5 ticks
+  ; TODO  
+
+  ; hold jump duration for 4 ticks
+  lda player_col
+  cmp #$80
+  beq continue
+
+  ; player is jumping -> 4 ticks in the air
+  inc jump_tick_count
+  lda jump_tick_count
+  cmp #4
+  bne continue
+  ; set player back on ground
+  lda #$80
+  sta player_col
+  lda #0
+  sta jump_tick_count
+
+continue:
+
+
+  rol ground
+  rol ground+1
+  jmp game_loop
+end_game:
+
+
+; "halt" the cpu
+loop:
+  jmp loop
+
+
+delay:
+  lda #$50
   sta T1CL
-  lda #$27
+  lda #$C3
   sta T1CH
-  ; generate interrupts for Timer1
-  lda #%11000000
-  sta IER
+  rts
+
+print_game:
+  jsr clear_lcd
+
+  ; print first line
+  ldx #40
+
+  lda player_col
+  cmp #0
+  bne print_line1
+  lda "@"
+  jsr print_char
+  dex
+print_line1:
+  lda "."
+  jsr print_char
+  dex
+  bne print_line1
+
+  ; print second line
+  lda ground
+  pha
+  lda ground+1
+  pha
+
+  lda player_col
+  cmp #$80
+  bne print_line2
+  lda "@"
+  jsr print_char
+print_line2:
+  rol ground
+  rol ground+1
+  bcc no_obstacle
+  lda "#"
+  jsr print_char
+no_obstacle:
+  jsr "."
+  jsr print_char
+  lda ground
+  ora ground+1
+  cmp #0
+  bne print_line2
+
+  pla
+  sta ground+1
+  pla
+  sta ground
+
   rts
 
 
@@ -86,7 +158,7 @@ init_lcd:
   lda #%00111000  ; set 8-bit mode, 2-line display, 5x8 font
   jsr lcd_instruction
 
-  lda #%00001110  ; display on, cursor on, blinking off
+  lda #%00001100  ; display on, cursor on, blinking off
   jsr lcd_instruction
 
   lda #%00000110  ; increment and shift cursor, don't shift display
@@ -94,7 +166,21 @@ init_lcd:
 
   lda #%00000001  ; clear screen
   jsr lcd_instruction
+  rts
 
+clear_lcd:
+  lda #%00000001
+  jsr lcd_instruction
+  rts
+
+goto_line1_lcd:
+  lda #%0000000010
+  jsr lcd_instruction
+  rts
+
+goto_line2_lcd:
+  lda #%0011000000
+  jsr lcd_instruction
   rts
 
 ; prints a string terminated by \0
@@ -161,7 +247,7 @@ lcd_instruction:
 ;   - reg A, character value
 print_char:
   jsr lcd_wait
-
+  pha
   sta PORTB
   lda #RS
   sta PORTA
@@ -169,21 +255,20 @@ print_char:
   sta PORTA
   lda #RS
   sta PORTA
+  pla
   rts
+
 
 nmi:
  rti
 
+
 irq:
-  bit T1CL
-  inc ticks
-  bne end_irq
-  inc ticks+1
-  bne end_irq
-  inc ticks+2
-  bne end_irq
-  inc ticks+3
-end_irq:
+  pha
+  lda #0
+  sta player_col
+  bit PORTA
+  pla
   rti
 
   .org $fffa
