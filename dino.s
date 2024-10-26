@@ -19,6 +19,8 @@ player_col = $0000 ; 1 bytes
 ground    = $0001 ; 2 bytes
 ticks     = $0003 ; 4 bytes
 jump_tick_count = $0007 ; 1 bytes
+toggle_time = $0008
+
 
   .org $8000
 reset:
@@ -30,8 +32,8 @@ reset:
   sta IER
   lda #$00
   sta PCR
-  sta ACR ; timed interrupt each time T1 is loaded
 
+  jsr init_timer
 
   ; the column of the player relative to ground+1 (left 8 bits of screen)
   lda #$80
@@ -40,29 +42,34 @@ reset:
   lda #0
   sta ground
   sta ground+1
-  sta ticks
-  sta ticks+1
-  sta ticks+2
-  sta ticks+3
+  sta toggle_time
   sta jump_tick_count
 
   jsr init_lcd
   cli
 
 game_loop:
+  ; subtraction: (ticks-toggle_time)
+  sec
+  lda ticks
+  sbc toggle_time
+  cmp #20 ; have 200ms elapsed?
+  bcc game_loop
+  lda ticks
+  sta toggle_time
+
   jsr print_game
-  jsr delay ; 50ms delay
 
   ; check for collision
-  lda ground+1
-  and player_col
-  cmp #$80
+;  lda ground+1
+;  and player_col
+;  cmp #$80
 ;  beq end_game
   
   ; add random obstacles every 5 ticks
   ; TODO  
 
-  ; hold jump duration for 4 ticks
+  ; hold jump duration for some ticks
   lda player_col
   cmp #$80
   beq continue
@@ -70,7 +77,7 @@ game_loop:
   ; player is jumping -> 4 ticks in the air
   inc jump_tick_count
   lda jump_tick_count
-  cmp #20
+  cmp #10
   bne continue
   ; set player back on ground
   lda #$80
@@ -91,16 +98,21 @@ loop:
   jmp loop
 
 
-; set delay to 50ms
-delay:
-  lda #$50
+; set delay to 10ms
+init_timer:
+  lda #0
+  sta ticks
+  sta ticks+1
+  sta ticks+2
+  sta ticks+3
+  lda #%01000000
+  sta ACR ; set Free-Run mode
+  lda #$0E
   sta T1CL
-  lda #$C3
+  lda #$27
   sta T1CH
-delay1:
-  bit IFR
-  bvc delay1 ; if 6th bit of IFT is 0, jmp delay1
-  lda T1CL ; clear the 6th bit after it was set
+  lda #%11000000
+  sta IER
   rts
 
 
@@ -266,12 +278,29 @@ nmi:
 
 
 irq:
+  lda IFR
+  and #%00000010
+  cmp #0
+  beq timer_interrupt
+
   pha
   lda #0
   sta player_col
   bit PORTA
   pla
+timer_interrupt:
+  ; read timer interrupt
+  bit T1CL
+  inc ticks
+  bne end_irq
+  inc ticks+1
+  bne end_irq
+  inc ticks+2
+  bne end_irq
+  inc ticks+3
+end_irq:
   rti
+
 
   .org $fffa
   .word nmi
