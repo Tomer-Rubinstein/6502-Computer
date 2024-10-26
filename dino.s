@@ -48,16 +48,9 @@ reset:
   jsr init_lcd
   cli
 
+ 
 game_loop:
-  ; subtraction: (ticks-toggle_time)
-  sec
-  lda ticks
-  sbc toggle_time
-  cmp #20 ; have 200ms elapsed?
-  bcc game_loop
-  lda ticks
-  sta toggle_time
-
+  jsr delay
   jsr print_game
 
   ; check for collision
@@ -67,14 +60,14 @@ game_loop:
 ;  beq end_game
   
   ; add random obstacles every 5 ticks
-  ; TODO  
+  ; TODO
 
   ; hold jump duration for some ticks
   lda player_col
   cmp #$80
   beq continue
 
-  ; player is jumping -> 4 ticks in the air
+  ; player is jumping -> 10 ticks in the air
   inc jump_tick_count
   lda jump_tick_count
   cmp #10
@@ -116,6 +109,17 @@ init_timer:
   rts
 
 
+delay:
+  sec
+  lda ticks
+  sbc toggle_time
+  cmp #20 ; have 200ms elapsed?
+  bcc delay
+  lda ticks
+  sta toggle_time
+  rts
+
+
 print_game:
   jsr clear_lcd
 
@@ -131,18 +135,17 @@ continue_print_game:
   ; print second line
   jsr goto_line2_lcd
 
-  lda ground
-  pha
-  lda ground+1
-  pha
-
   lda player_col
   cmp #$80
-  bne print_line2
+  bne print_no_player
   lda #"x"
   jsr print_char
+  jmp print_line_2
 
-print_line2:
+print_no_player:
+  lda #" "
+  jsr print_char
+print_line_2:
   rol ground
   rol ground+1
   lda #"#"
@@ -150,12 +153,13 @@ print_line2:
   lda #"#"
   jsr print_char
 end_print_game:
-  pla
-  sta ground+1
-  pla
-  sta ground
   rts
 
+
+print_ground:
+  lda ground
+  ; TODO: on loop, ASL, check if carry, print accordingly
+  rts
 
 ; initialize lcd display screen w.r.t custom settings
 init_lcd:
