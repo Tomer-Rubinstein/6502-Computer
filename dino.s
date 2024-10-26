@@ -3,7 +3,7 @@ PORTA = $6001
 DDRB  = $6002
 DDRA  = $6003
 PCR   = $600C
-IFR   = $600D
+IFR   = $600D ; Interrupt Flag Reg (8 bits high -> low): IRQ, Timer1, Timer2, CB1, CB2, ShiftReg, CA1, CA2
 IER   = $600E
 T1CL  = $6004
 T1CH  = $6005
@@ -30,6 +30,8 @@ reset:
   sta IER
   lda #$00
   sta PCR
+  sta ACR ; timed interrupt each time T1 is loaded
+
 
   ; the column of the player relative to ground+1 (left 8 bits of screen)
   lda #$80
@@ -49,12 +51,13 @@ reset:
 
 game_loop:
   jsr print_game
+  jsr delay ; 50ms delay
 
   ; check for collision
   lda ground+1
   and player_col
   cmp #$80
-  beq end_game
+;  beq end_game
   
   ; add random obstacles every 5 ticks
   ; TODO  
@@ -67,7 +70,7 @@ game_loop:
   ; player is jumping -> 4 ticks in the air
   inc jump_tick_count
   lda jump_tick_count
-  cmp #4
+  cmp #20
   bne continue
   ; set player back on ground
   lda #$80
@@ -76,7 +79,6 @@ game_loop:
   sta jump_tick_count
 
 continue:
-
 
   rol ground
   rol ground+1
@@ -89,32 +91,34 @@ loop:
   jmp loop
 
 
+; set delay to 50ms
 delay:
   lda #$50
   sta T1CL
   lda #$C3
   sta T1CH
+delay1:
+  bit IFR
+  bvc delay1 ; if 6th bit of IFT is 0, jmp delay1
+  lda T1CL ; clear the 6th bit after it was set
   rts
+
 
 print_game:
   jsr clear_lcd
 
   ; print first line
-  ldx #40
-
+  jsr goto_line1_lcd
   lda player_col
   cmp #0
-  bne print_line1
-  lda "@"
+  bne continue_print_game
+  lda #"x"
   jsr print_char
-  dex
-print_line1:
-  lda "."
-  jsr print_char
-  dex
-  bne print_line1
 
+continue_print_game:
   ; print second line
+  jsr goto_line2_lcd
+
   lda ground
   pha
   lda ground+1
@@ -123,27 +127,21 @@ print_line1:
   lda player_col
   cmp #$80
   bne print_line2
-  lda "@"
+  lda #"x"
   jsr print_char
+
 print_line2:
   rol ground
   rol ground+1
-  bcc no_obstacle
-  lda "#"
+  lda #"#"
   jsr print_char
-no_obstacle:
-  jsr "."
+  lda #"#"
   jsr print_char
-  lda ground
-  ora ground+1
-  cmp #0
-  bne print_line2
-
+end_print_game:
   pla
   sta ground+1
   pla
   sta ground
-
   rts
 
 
@@ -168,20 +166,24 @@ init_lcd:
   jsr lcd_instruction
   rts
 
+
 clear_lcd:
   lda #%00000001
   jsr lcd_instruction
   rts
+
 
 goto_line1_lcd:
   lda #%0000000010
   jsr lcd_instruction
   rts
 
+
 goto_line2_lcd:
   lda #%0011000000
   jsr lcd_instruction
   rts
+
 
 ; prints a string terminated by \0
 ; params:
