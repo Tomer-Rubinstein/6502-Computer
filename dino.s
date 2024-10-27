@@ -45,6 +45,11 @@ reset:
   sta toggle_time
   sta jump_tick_count
 
+  lda #%00100010
+  sta ground
+  lda #%00000011
+  sta ground+1
+
   jsr init_lcd
   cli
 
@@ -80,8 +85,8 @@ game_loop:
 
 continue:
 
-  rol ground
-  rol ground+1
+;  rol ground
+;  rol ground+1
   jmp game_loop
 end_game:
 
@@ -146,19 +151,47 @@ print_no_player:
   lda #" "
   jsr print_char
 print_line_2:
-  rol ground
-  rol ground+1
-  lda #"#"
-  jsr print_char
-  lda #"#"
-  jsr print_char
+  jsr print_ground
 end_print_game:
   rts
 
 
 print_ground:
-  lda ground
-  ; TODO: on loop, ASL, check if carry, print accordingly
+  pha
+  txa
+  pha
+  tya
+  pha
+
+  jsr goto_line2_lcd
+  ldy ground+1
+  ldx #$08
+  print_loop1:
+    tya
+    and #$80
+    cmp #$80
+    bne no_print
+    lda #"#"
+    jsr print_char
+    jmp loop1_cont
+  no_print:
+    ; shift cursor 1 to the right
+    lda #%00010100
+    jsr lcd_instruction
+  loop1_cont:
+    ; shift left by 1 the ground
+    tya
+    rol A
+    tay
+
+    dex
+    bne print_loop1
+
+  pla
+  tay
+  pla
+  tax
+  pla
   rts
 
 ; initialize lcd display screen w.r.t custom settings
