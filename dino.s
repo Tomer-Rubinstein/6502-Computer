@@ -47,7 +47,7 @@ reset:
 
   lda #%00100010
   sta ground
-  lda #%00000011
+  lda #%10000011
   sta ground+1
 
   jsr init_lcd
@@ -151,20 +151,21 @@ print_no_player:
   lda #" "
   jsr print_char
 print_line_2:
+  jsr goto_line2_lcd
+  ldy ground+1
+  jsr print_ground
+  ldy ground
   jsr print_ground
 end_print_game:
   rts
 
 
 print_ground:
+  ; param: reg Y - ground half bitfield
   pha
   txa
   pha
-  tya
-  pha
 
-  jsr goto_line2_lcd
-  ldy ground+1
   ldx #$08
   print_loop1:
     tya
@@ -187,8 +188,6 @@ print_ground:
     dex
     bne print_loop1
 
-  pla
-  tay
   pla
   tax
   pla
