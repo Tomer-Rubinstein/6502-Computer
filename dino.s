@@ -23,6 +23,7 @@ toggle_time = $0008 ; 1 bytes
 tick_count = $0009 ; 1 bytes
 blocks_tick_count = $000A ; 1 bytes
 
+
   .org $8000
 reset:
   sei
@@ -53,10 +54,11 @@ reset:
 
  
 game_loop:
+  ; create delay of 5 ticks
   jsr delay
   inc tick_count
   lda tick_count
-  cmp #5
+  cmp #1
   bne game_loop
   lda #0
   sta tick_count
@@ -92,7 +94,7 @@ continue:
   jsr move_ground
   jmp game_loop
 end_game:
-
+  jsr clear_lcd
 
 ; "halt" the cpu
 loop:
@@ -130,18 +132,18 @@ delay:
 
 move_ground:
   pha
+  asl ground+1
+  clc
   asl ground
-  bcc no_add_block
+  bcc end_move_ground
   lda ground+1
   ora #$01
   sta ground+1
-no_add_block:
-  asl ground+1
+end_move_ground:
   pla
   rts
 
 
-; blocks_tick_count
 add_block:
   pha
   inc blocks_tick_count
@@ -174,7 +176,7 @@ print_game:
   lda player_col
   cmp #0
   bne continue_print_game
-  lda #"x"
+  lda #"o"
   jsr print_char
 
 continue_print_game:
@@ -184,7 +186,7 @@ continue_print_game:
   lda player_col
   cmp #$80
   bne print_no_player
-  lda #"x"
+  lda #"o"
   jsr print_char
   jmp print_line_2
 
@@ -274,24 +276,6 @@ goto_line2_lcd:
   rts
 
 
-; prints a string terminated by \0
-; params:
-;   - reg X, lower byte of the effective address
-;   - reg Y, higher byte of the effective address
-print_str:
-  stx $0000
-  sty $0001
-  ldy #0
-print_str_loop:
-  lda ($0000), Y
-  beq end_print
-  jsr print_char
-  iny
-  jmp print_str_loop
-end_print:
-  rts
-
-
 ; busy waits until the busy flag of the LCD is set
 lcd_wait:
   pha
@@ -355,16 +339,19 @@ nmi:
 
 
 irq:
+  pha
+  ; check if button clicked interrupt or timer interrupt
+  ; (if IFR.CA1 is set, then its a timer interrupt)
   lda IFR
   and #%00000010
   cmp #0
   beq timer_interrupt
 
-  pha
+  ; button clicked interrupt
   lda #0
   sta player_col
   bit PORTA
-  pla
+  jmp end_irq
 timer_interrupt:
   ; read timer interrupt
   bit T1CL
@@ -376,6 +363,7 @@ timer_interrupt:
   bne end_irq
   inc ticks+3
 end_irq:
+  pla
   rti
 
 
