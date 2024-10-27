@@ -19,8 +19,9 @@ player_col = $0000 ; 1 bytes
 ground    = $0001 ; 2 bytes
 ticks     = $0003 ; 4 bytes
 jump_tick_count = $0007 ; 1 bytes
-toggle_time = $0008
-
+toggle_time = $0008 ; 1 bytes
+tick_count = $0009 ; 1 bytes
+blocks_tick_count = $000A ; 1 bytes
 
   .org $8000
 reset:
@@ -44,11 +45,8 @@ reset:
   sta ground+1
   sta toggle_time
   sta jump_tick_count
-
-  lda #%00100010
-  sta ground
-  lda #%10000011
-  sta ground+1
+  sta tick_count
+  sta blocks_tick_count
 
   jsr init_lcd
   cli
@@ -56,26 +54,33 @@ reset:
  
 game_loop:
   jsr delay
+  inc tick_count
+  lda tick_count
+  cmp #5
+  bne game_loop
+  lda #0
+  sta tick_count
+
   jsr print_game
 
   ; check for collision
-;  lda ground+1
-;  and player_col
-;  cmp #$80
-;  beq end_game
+  lda ground+1
+  and player_col
+  cmp #$80
+  beq end_game
   
-  ; add random obstacles every 5 ticks
-  ; TODO
+  ; add random obstacles every now and then
+  jsr add_block
 
   ; hold jump duration for some ticks
   lda player_col
   cmp #$80
   beq continue
 
-  ; player is jumping -> 10 ticks in the air
+  ; player is jumping -> hold 4 ticks in the air
   inc jump_tick_count
   lda jump_tick_count
-  cmp #10
+  cmp #4
   bne continue
   ; set player back on ground
   lda #$80
@@ -84,9 +89,7 @@ game_loop:
   sta jump_tick_count
 
 continue:
-
-;  rol ground
-;  rol ground+1
+  jsr move_ground
   jmp game_loop
 end_game:
 
@@ -122,6 +125,44 @@ delay:
   bcc delay
   lda ticks
   sta toggle_time
+  rts
+
+
+move_ground:
+  pha
+  asl ground
+  bcc no_add_block
+  lda ground+1
+  ora #$01
+  sta ground+1
+no_add_block:
+  asl ground+1
+  pla
+  rts
+
+
+; blocks_tick_count
+add_block:
+  pha
+  inc blocks_tick_count
+
+  lda blocks_tick_count
+  cmp #10
+  bne check_double_block
+  lda ground
+  ora #%00000100 ; single block
+  sta ground
+check_double_block:
+  lda blocks_tick_count
+  cmp #20
+  bne end_add_block
+  lda ground
+  ora #%00001100 ; double block
+  sta ground
+  lda #0
+  sta blocks_tick_count
+end_add_block:
+  pla
   rts
 
 
