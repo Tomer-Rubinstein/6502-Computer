@@ -94,7 +94,6 @@ continue:
   jsr move_ground
   jmp game_loop
 end_game:
-  jsr clear_lcd
 
 ; "halt" the cpu
 loop:
