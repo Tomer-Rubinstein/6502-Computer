@@ -20,8 +20,7 @@ ground    = $0001 ; 2 bytes
 ticks     = $0003 ; 4 bytes
 jump_tick_count = $0007 ; 1 bytes
 toggle_time = $0008 ; 1 bytes
-tick_count = $0009 ; 1 bytes
-blocks_tick_count = $000A ; 1 bytes
+blocks_tick_count = $0009 ; 1 bytes
 
 
   .org $8000
@@ -46,7 +45,6 @@ reset:
   sta ground+1
   sta toggle_time
   sta jump_tick_count
-  sta tick_count
   sta blocks_tick_count
 
   jsr init_lcd
@@ -54,15 +52,7 @@ reset:
 
  
 game_loop:
-  ; create delay of 5 ticks
   jsr delay
-  inc tick_count
-  lda tick_count
-  cmp #1
-  bne game_loop
-  lda #0
-  sta tick_count
-
   jsr print_game
 
   ; check for collision
