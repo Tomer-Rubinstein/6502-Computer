@@ -1,9 +1,11 @@
 # 6502 Computer
 Source files for my 6502 CPU breadboard-computer from [Ben Eater](https://eater.net/6502).
 
+![Schematic](https://eater.net/schematics/6502.png)
+
 ## Preparations
 ### Compiling the vasm assembler (Ubuntu 20.04)
-After downloading the ``vasm``` assembler from [here](http://sun.hasenbraten.de/vasm/index.php?view=relsrc), run:
+After downloading the ``vasm`` assembler from [here](http://sun.hasenbraten.de/vasm/index.php?view=relsrc), run:
 ```
  $ make CPU=6502 SYNTAX=oldstyle
 ```
@@ -15,9 +17,10 @@ Follow the installation process discussed [here](https://gitlab.com/DavidGriffit
 
 **NOTE**: On VirtualBox, remember to mount the USB connection to the VM at ``Settings > USB > USB Device Filters``.
 
-## Compilation
+## Dino Game (dino.s) Compilation
 ```
- $ vasm -Fbin -dotdir PROGRAM.s
+ $ vasm -Fbin -dotdir dino.s
  $ minipro -p AT28C256 -w a.out
 ```
+YouTube demo of the game [here](https://www.youtube.com/watch?v=J71bBrCMzJE).
 
